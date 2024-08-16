@@ -3,5 +3,6 @@
 *.lzh
 *.json
 *.pkl
+*.txt
 !/boat/config.json
 /boat/__pycache__/
