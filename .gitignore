@@ -1,0 +1,7 @@
+*.csv
+*.TXT
+*.lzh
+*.json
+*.pkl
+!/boat/config.json
+/boat/__pycache__/

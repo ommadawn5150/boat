@@ -1,0 +1,23 @@
+{   
+    "dir" : {
+        "SAVE_DIR_K" : "data/DL/results_lzh/",
+        "SAVE_DIR_B" : "data/DL/bangumi_lzh/",
+        "SAVE_DIR_K_UNLZH" : "data/DL/results_unlzh/",
+        "SAVE_DIR_B_UNLZH" : "data/DL/bangumi_unlzh/",
+        "SAVE_DIR_K_TXT" : "data/txt/K_files/",
+        "SAVE_DIR_B_TXT" : "data/txt/B_files/",
+        "SAVE_DIR_K_CONVERTED" : "data/txt/K_files_converted/",
+        "SAVE_DIR_B_CONVERTED" : "data/txt/B_files_converted/",
+        "CSV_DIR_K" : "data/csv/K_files/",
+        "CSV_DIR_B" : "data/csv/B_files/",
+        "DIR_RACE_INFO" : "data/csv/Race_info/",
+        "RACER_LZH" : "data/DL/racer_lzh/",
+        "RACER_TXT" : "data/txt/racer_txt/",
+        "RACER_CSV" : "data/csv/racer_csv/"
+    },
+    "settings" : {
+        "INTERVAL" : 1,
+        "FIXED_URL_K" : "http://www1.mbrace.or.jp/od2/K/",
+        "FIXED_URL_B" : "http://www1.mbrace.or.jp/od2/B/"
+    }
+}
