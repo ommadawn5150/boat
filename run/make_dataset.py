@@ -11,7 +11,9 @@ sys.path.append(os.path.join(dirname, '..'))
 sys.path.append(os.path.join(dirname, '../boat/'))
 from data_loader import *
 import pickle
-frm = 17
+
+frm = 15 #Edit this to change the start year
+
 df = get_dataset(frm)
 print(df.info())
 with open(f'./data/pickle/df{frm}.pkl', 'wb') as f:
