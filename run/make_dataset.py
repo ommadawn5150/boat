@@ -12,7 +12,7 @@ sys.path.append(os.path.join(dirname, '../boat/'))
 from data_loader import *
 import pickle
 
-frm = 15 #Edit this to change the start year
+frm = 23 #Edit this to change the start year
 
 df = get_dataset(frm)
 print(df.info())
