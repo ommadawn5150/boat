@@ -5,4 +5,5 @@
 *.pkl
 *.txt
 !/boat/config.json
+!/requirements.txt
 /boat/__pycache__/

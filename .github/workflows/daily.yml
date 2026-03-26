@@ -1,0 +1,52 @@
+name: 毎日の予想投稿
+
+on:
+  schedule:
+    # 毎朝7:00 JST = 22:00 UTC（前日）
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # 手動実行ボタン
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存ライブラリをインストール
+        run: pip install -r requirements.txt google-api-python-client google-auth
+
+      - name: モデル・レーサーCSVをGoogle Driveからダウンロード
+        run: python3 run/storage.py download
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+
+      - name: 当日のBファイルをダウンロード・変換
+        run: |
+          TODAY=$(TZ='Asia/Tokyo' date '+%Y-%m-%d')
+          YESTERDAY=$(TZ='Asia/Tokyo' date -d 'yesterday' '+%Y-%m-%d')
+          echo "対象日: $TODAY"
+          python3 boat/download.py -dl -u -s "$YESTERDAY" -e "$TODAY" -bk B
+          python3 boat/convert.py -b
+
+      - name: 予想を実行してDiscordに投稿
+        run: cd run && python3 predictor.py
+        env:
+          BOAT_DIFF: '0'
+          BOAT_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: 予想履歴をGoogle Driveにアップロード
+        if: always()
+        run: python3 run/storage.py upload
+        env:
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}

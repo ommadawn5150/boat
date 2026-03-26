@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
-from tqdm import tqdm
-import json
-
-import lightgbm as lgb
 import json
 from urllib.request import Request, urlopen
+from datetime import datetime as dt
+from datetime import timedelta as td
+
 def post_discord(message: str, webhook_url: str):
     headers = {
         "Content-Type": "application/json",
@@ -19,7 +17,6 @@ def post_discord(message: str, webhook_url: str):
         data=json.dumps(data).encode(),
         headers=headers,
     )
-
     with urlopen(request) as res:
         assert res.getcode() == 204
 
@@ -27,76 +24,91 @@ import sys
 sys.path.append('../')
 sys.path.append('../boat/')
 
+import lightgbm as lgb
 from config import *
 set_values(globals())
 
-model = lgb.Booster(model_file=f'../models/model_{frm}.txt')
-from datetime import datetime as dt
-from datetime import timedelta as td
+from data_loader import *
 
-diff = -5
+model = lgb.Booster(model_file=f'../models/model_{frm}.txt')
+
+# 環境変数 BOAT_DIFF で日付オフセットを上書き可能（GitHub Actions では 0 を指定）
+diff = int(os.environ.get('BOAT_DIFF', '-5'))
+# 環境変数 BOAT_WEBHOOK でDiscord投稿先を上書き可能
+WEBHOOK_DEBUG = os.environ.get('BOAT_WEBHOOK', WEBHOOK_DEBUG)
 
 today = (dt.now() + td(days=diff)).strftime('%Y%m%d')[2:]
 df_today = pd.read_csv(f'../data/csv/B_files/B{today}.csv', index_col=0)
 
-from data_loader import *
 year = int(today[:2])
 half = 'f' if int(today[2:]) < 700 else 'l'
-rdf = get_racer_results(year, half).drop('体重',axis=1)
-use_cols.remove('着')
-df = pd.merge(df_today, rdf, on=['選手登番'], how='inner')[use_cols]
+rdf = get_racer_results(year, half).drop('体重', axis=1)
+
+# use_cols からグローバルリストを破壊せずに '着' を除いたリストを作成
+predict_cols = [c for c in use_cols if c != '着']
+
+df = pd.merge(df_today, rdf, on=['選手登番'], how='inner')[predict_cols]
 
 pred = model.predict(df, num_iteration=model.best_iteration)
 df['pred'] = pred
 
-
 races = df['RaceID'].unique()
-place_code = {'桐生':'01','戸田':'02','江戸川':'03','平和島':'04','多摩川':'05','浜名湖':'06','蒲郡':'07','常滑':'08','津':'09','三国':'10','びわこ':'11','住之江':'12','尼崎':'13','鳴門':'14','丸亀':'15','児島':'16','宮島':'17','徳山':'18','下関':'19','若松':'20','芦屋':'21','福岡':'22','唐津':'23','大村':'24'}
-_place_code = {v:k for k,v in place_code.items()}
+_place_code = {int(v): k for k, v in PLACE_CODE.items()}
+
+# ROI追跡用に予想履歴を保存
+history_path = '../pred/history.csv'
+history_rows = []
 
 n = 0
 post_discord(f'## {today} 予想\n', WEBHOOK_DEBUG)
 for raceid in races:
     race = df.query(f'RaceID == {raceid}')
-    
+
     p = (race['pred'].argsort()[::-1] + 1).values
-    _place = _place_code[f"{race['場所'].values[0]:02}"]
-    r = race['R'].values[0]
-    
     place = race['場所'].values[0]
-    #nige = race['逃げ率'].values[0] > 0.4
-    nige_s = race.query(f'艇番 == {p[0]}')['逃げ率'].values[0]
+    _place = _place_code.get(place, str(place))
+    r = race['R'].values[0]
+
     nige = race.query(f'艇番 == {p[0]}')['逃げ率'].values[0] > 0.6
-    female = sum(race['性別'].values) == 12
     ana = p[0] != 1
-    pl = place in [21,24,19]
-    pl = place in [3,2,4]
-    
-    if nige and pl and ana :
-        buy = True
-        n += 1
-    else:
-        buy = False
-    
-    pred_rank = ''
-    for i in p:
-        pred_rank += str(i)
-    
-    kaime = []
-    kaime.append(pred_rank[:3])
-    kaime.append(pred_rank[:2] + pred_rank[3])
-    kaime.append(pred_rank[0] + pred_rank[2] + pred_rank[1])
-    kaime.append(pred_rank[1] + pred_rank[0] + pred_rank[2])
-    '''
-    kaime.append(pred_rank[:2] + pred_rank[4])
-    kaime.append(pred_rank[:2] + pred_rank[5])
-    '''
+    pl = place in ACTIVE_PLACES
+
+    pred_rank = ''.join(str(i) for i in p)
+
+    kaime = [
+        pred_rank[:3],
+        pred_rank[:2] + pred_rank[3],
+        pred_rank[0] + pred_rank[2] + pred_rank[1],
+        pred_rank[1] + pred_rank[0] + pred_rank[2],
+    ]
+
+    buy = nige and pl and ana
     if buy:
+        n += 1
         post = f'### {_place} {r}R : {pred_rank}\n'
         post += f'**買い目** :'
         for k in kaime:
             post += f'{k}, '
-    
         print(post)
         post_discord(post, WEBHOOK_DEBUG)
-    
+
+    # 予想履歴を記録（買い目の有無を問わず全レース保存）
+    history_rows.append({
+        'date': today,
+        'RaceID': raceid,
+        'place': _place,
+        'R': r,
+        'pred_rank': pred_rank,
+        'kaime': '|'.join(kaime),
+        'buy': buy,
+    })
+
+# history.csv に追記
+history_df = pd.DataFrame(history_rows)
+if os.path.exists(history_path):
+    history_df.to_csv(history_path, mode='a', header=False, index=False)
+else:
+    os.makedirs(os.path.dirname(history_path), exist_ok=True)
+    history_df.to_csv(history_path, index=False)
+
+print(f'本日の買い目レース数: {n}')
