@@ -1,0 +1,20 @@
+[Unit]
+Description=Boat Racing Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=boat
+WorkingDirectory=/home/boat/boat/run
+ExecStart=/home/boat/boat/venv/bin/python3 bot.py
+Restart=on-failure
+RestartSec=10
+Environment="DISCORD_BOT_TOKEN=YOUR_TOKEN_HERE"
+
+# ログをjournaldに流す
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=boat-bot
+
+[Install]
+WantedBy=multi-user.target

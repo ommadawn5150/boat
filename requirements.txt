@@ -1,0 +1,11 @@
+pandas
+numpy
+lightgbm
+scikit-learn
+matplotlib
+polars
+lhafile
+requests
+tqdm
+geopy
+discord.py
