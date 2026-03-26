@@ -41,25 +41,28 @@ def rank_model(df):
         'ndcg_eval_at': [1,2,3],
         'boosting_type': 'gbdt',
         'seed' : 42,
-        'num_leaves': 31,
+        'num_leaves': 63,
         'max_depth': -1,
-        'learning_rate': 0.05,
+        'learning_rate': 0.01,
+        'reg_alpha': 0.1,
+        'reg_lambda': 1.0,
+        'min_child_samples': 50,
     }
-    
+
     lgtrain = lgb.Dataset(X_train, y_train, group=train_group)
     lgvalid = lgb.Dataset(X_valid, y_valid, group=valid_group)
-    
+
     callbacks = [
         lgb.early_stopping(stopping_rounds=300, verbose=True),
         lgb.log_evaluation(100),
     ]
-    
+
     lgb_results = {}
     print('Training model...')
     model = lgb.train(
         params,
         lgtrain,
-        num_boost_round=1500,
+        num_boost_round=5000,
         valid_sets=[lgtrain, lgvalid],
         valid_names=['train','valid'],
         #evals_result=lgb_results,

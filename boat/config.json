@@ -20,7 +20,8 @@
         "WEBHOOK_DEBUG" : "https://discord.com/api/webhooks/1112032729660391517/ab_67lNUU157pQoIc1rnSzjbrqycd06cKlChhTNy1MndXm_ZWWRPQY4KODyWCnRoNn9Y",
         "INTERVAL": 1,
         "FIXED_URL_K": "http://www1.mbrace.or.jp/od2/K/",
-        "FIXED_URL_B": "http://www1.mbrace.or.jp/od2/B/"
+        "FIXED_URL_B": "http://www1.mbrace.or.jp/od2/B/",
+        "ACTIVE_PLACES": [2, 3, 4]
     },
     "pred": {
         "frm": 15,
@@ -68,7 +69,22 @@
             "4コース1着回数",
             "5コース1着回数",
             "6コース1着回数",
-            "1コースまくられ率"
+            "1コースまくられ率",
+            "年齢",
+            "展示",
+            "進入",
+            "1コースF回数",
+            "2コースF回数",
+            "3コースF回数",
+            "4コースF回数",
+            "5コースF回数",
+            "6コースF回数",
+            "1コース平均スタートタイミング",
+            "2コース平均スタートタイミング",
+            "3コース平均スタートタイミング",
+            "4コース平均スタートタイミング",
+            "5コース平均スタートタイミング",
+            "6コース平均スタートタイミング"
         ]
     },
     "場所": {
