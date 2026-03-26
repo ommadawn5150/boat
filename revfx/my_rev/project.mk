@@ -1,0 +1,6 @@
+PROJECT = my_rev
+UCXXSRC = my_rev.cpp
+UINCDIR =
+UDEFS =
+ULIB =
+ULIBDIR =

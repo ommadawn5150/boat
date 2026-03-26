@@ -1,0 +1,6 @@
+PROJECT = my_osc
+UCXXSRC = my_osc.cpp
+UINCDIR =
+UDEFS =
+ULIB =
+ULIBDIR =
