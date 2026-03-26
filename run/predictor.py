@@ -40,11 +40,6 @@ year = int(today[:2])
 half = 'f' if int(today[2:]) < 700 else 'l'
 rdf = get_racer_results(year, half).drop('体重', axis=1)
 
-# 展示・進入はKファイル（レース結果）から取得するため予想時は欠損値として扱う
-# LightGBMは欠損値をネイティブに処理できるためモデル精度に影響なく動作する
-df_today['展示'] = np.nan
-df_today['進入'] = np.nan
-
 # use_cols からグローバルリストを破壊せずに '着' を除いたリストを作成
 predict_cols = [c for c in use_cols if c != '着']
 

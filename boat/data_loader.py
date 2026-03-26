@@ -35,10 +35,10 @@ def read_csv(files, kind):
             df = pd.concat([df, pd.read_csv(path, index_col=0)])
     else :
         path = CSV_DIR_K + f'{kind}{files[0]}.csv'
-        df = pd.read_csv(path, usecols=['RaceID','着','選手登番','展示','進入','単勝_結果','単勝_払戻','2連単_結果','2連単_払戻','2連単_人気','3連単_結果','3連単_払戻','3連単_人気'])
+        df = pd.read_csv(path, usecols=['RaceID','着','選手登番','単勝_結果','単勝_払戻','2連単_結果','2連単_払戻','2連単_人気','3連単_結果','3連単_払戻','3連単_人気'])
         for f in files[1:]:
             path = CSV_DIR_K + f'{kind}{f}.csv'
-            df = pd.concat([df, pd.read_csv(path, usecols=['RaceID','着','選手登番','展示','進入','単勝_結果','単勝_払戻','2連単_結果','2連単_払戻','2連単_人気','3連単_結果','3連単_払戻','3連単_人気'])])
+            df = pd.concat([df, pd.read_csv(path, usecols=['RaceID','着','選手登番','単勝_結果','単勝_払戻','2連単_結果','2連単_払戻','2連単_人気','3連単_結果','3連単_払戻','3連単_人気'])])
     return df
 
 def get_racer_results(year, half):
