@@ -3,7 +3,7 @@ name: 月次モデル再学習
 on:
   schedule:
     # 毎月1日 3:00 JST = 毎月1日 18:00 UTC（前日）
-    - cron: '0 18 28-31 * *'  # 末日付近に毎日チェックし、月をまたいだ翌日に実行
+    - cron: '0 18 1 * *'
   workflow_dispatch:
     inputs:
       frm_year:
@@ -14,7 +14,7 @@ on:
 jobs:
   retrain:
     runs-on: ubuntu-latest
-    timeout-minutes: 180  # 3時間（大量データのDL+学習を考慮）
+    timeout-minutes: 180
 
     steps:
       - name: リポジトリをチェックアウト
@@ -27,15 +27,13 @@ jobs:
           cache: 'pip'
 
       - name: 依存ライブラリをインストール
-        run: pip install -r requirements.txt boto3
+        run: pip install -r requirements.txt google-api-python-client google-auth
 
-      - name: 既存のレーサーCSVをS3からダウンロード
+      - name: 既存のレーサーCSVをGoogle Driveからダウンロード
         run: python3 run/storage.py download
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
 
       - name: 直近1年分のレースデータをダウンロード・変換
         run: |
@@ -48,38 +46,30 @@ jobs:
       - name: データセットを再構築
         run: |
           FRM=${{ github.event.inputs.frm_year || '20' }}
-          cd run
-          # make_dataset.py内のfrmパラメータを上書き
+          mkdir -p pickle
           python3 -c "
           import sys
-          sys.path.insert(0, '../boat')
+          sys.path.insert(0, 'boat')
           from data_loader import get_dataset
-          import pickle, os
           frm = int('$FRM')
           df = get_dataset(frm=frm)
-          os.makedirs('../pickle', exist_ok=True)
-          df.to_pickle(f'../pickle/df{frm}.pkl')
-          df.to_csv(f'../pickle/df{frm}.csv', index=False)
+          df.to_pickle(f'pickle/df{frm}.pkl')
           print(f'データセット構築完了: {len(df)} 行')
           "
 
       - name: モデルを再学習
-        run: |
-          cd run
-          python3 model.py
+        run: cd run && python3 model.py
 
-      - name: 新モデルをS3にアップロード
+      - name: 新モデルをGoogle Driveにアップロード
         run: python3 run/storage.py upload
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
 
       - name: Discordに再学習完了を通知
         run: |
           python3 -c "
-          import json, os
+          import json
           from urllib.request import Request, urlopen
           msg = '✅ モデル再学習が完了しました。新しいモデルが有効になります。'
           data = json.dumps({'content': msg}).encode()

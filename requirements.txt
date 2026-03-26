@@ -9,3 +9,5 @@ requests
 tqdm
 geopy
 discord.py
+google-api-python-client
+google-auth

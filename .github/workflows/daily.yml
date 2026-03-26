@@ -22,15 +22,13 @@ jobs:
           cache: 'pip'
 
       - name: 依存ライブラリをインストール
-        run: pip install -r requirements.txt boto3
+        run: pip install -r requirements.txt google-api-python-client google-auth
 
-      - name: モデル・レーサーCSVをS3からダウンロード
+      - name: モデル・レーサーCSVをGoogle Driveからダウンロード
         run: python3 run/storage.py download
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
 
       - name: 当日のBファイルをダウンロード・変換
         run: |
@@ -46,11 +44,9 @@ jobs:
           BOAT_DIFF: '0'
           BOAT_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
 
-      - name: 予想履歴をS3にアップロード
+      - name: 予想履歴をGoogle Driveにアップロード
         if: always()
         run: python3 run/storage.py upload
         env:
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
