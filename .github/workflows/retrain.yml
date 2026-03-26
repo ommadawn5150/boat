@@ -1,0 +1,89 @@
+name: 月次モデル再学習
+
+on:
+  schedule:
+    # 毎月1日 3:00 JST = 毎月1日 18:00 UTC（前日）
+    - cron: '0 18 28-31 * *'  # 末日付近に毎日チェックし、月をまたいだ翌日に実行
+  workflow_dispatch:
+    inputs:
+      frm_year:
+        description: '学習開始年（例: 20 = 2020年）'
+        required: false
+        default: '20'
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3時間（大量データのDL+学習を考慮）
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境をセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 依存ライブラリをインストール
+        run: pip install -r requirements.txt boto3
+
+      - name: 既存のレーサーCSVをS3からダウンロード
+        run: python3 run/storage.py download
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+
+      - name: 直近1年分のレースデータをダウンロード・変換
+        run: |
+          START=$(TZ='Asia/Tokyo' date -d '1 year ago' '+%Y-%m-%d')
+          END=$(TZ='Asia/Tokyo' date '+%Y-%m-%d')
+          echo "期間: $START ～ $END"
+          python3 boat/download.py -dl -u -s "$START" -e "$END" -bk BK
+          python3 boat/convert.py -k -b -i
+
+      - name: データセットを再構築
+        run: |
+          FRM=${{ github.event.inputs.frm_year || '20' }}
+          cd run
+          # make_dataset.py内のfrmパラメータを上書き
+          python3 -c "
+          import sys
+          sys.path.insert(0, '../boat')
+          from data_loader import get_dataset
+          import pickle, os
+          frm = int('$FRM')
+          df = get_dataset(frm=frm)
+          os.makedirs('../pickle', exist_ok=True)
+          df.to_pickle(f'../pickle/df{frm}.pkl')
+          df.to_csv(f'../pickle/df{frm}.csv', index=False)
+          print(f'データセット構築完了: {len(df)} 行')
+          "
+
+      - name: モデルを再学習
+        run: |
+          cd run
+          python3 model.py
+
+      - name: 新モデルをS3にアップロード
+        run: python3 run/storage.py upload
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+
+      - name: Discordに再学習完了を通知
+        run: |
+          python3 -c "
+          import json, os
+          from urllib.request import Request, urlopen
+          msg = '✅ モデル再学習が完了しました。新しいモデルが有効になります。'
+          data = json.dumps({'content': msg}).encode()
+          req = Request('${{ secrets.DISCORD_WEBHOOK }}', data=data,
+                        headers={'Content-Type': 'application/json'})
+          urlopen(req)
+          " || true

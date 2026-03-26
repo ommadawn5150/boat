@@ -32,7 +32,11 @@ from data_loader import *
 
 model = lgb.Booster(model_file=f'../models/model_{frm}.txt')
 
-diff = -5
+# 環境変数 BOAT_DIFF で日付オフセットを上書き可能（GitHub Actions では 0 を指定）
+diff = int(os.environ.get('BOAT_DIFF', '-5'))
+# 環境変数 BOAT_WEBHOOK でDiscord投稿先を上書き可能
+WEBHOOK_DEBUG = os.environ.get('BOAT_WEBHOOK', WEBHOOK_DEBUG)
+
 today = (dt.now() + td(days=diff)).strftime('%Y%m%d')[2:]
 df_today = pd.read_csv(f'../data/csv/B_files/B{today}.csv', index_col=0)
 
